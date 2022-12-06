@@ -17,7 +17,6 @@ function App() {
   }, [chats]);
 
   const scrollToNewChat = () => {
-    // console.log(ref);
     if (ref.current) {
       ref.current.scrollTop = ref.current.scrollHeight;
     }
