@@ -1,0 +1,38 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+#chat-scroll {
+  border: 1px solid black;
+  height: 50vh;
+  overflow-y: scroll;
+}
+
+ul#chat-scroll {
+  list-style-type: none;
+  padding: 0;
+}
+
+ul#chat-scroll>li:nth-child(odd){
+  background-color:#CDCDCD;
+}​
+
+
+#chat-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.chat-message {
+  padding: 10px;
+}
+
+form {
+  width: 100%;
+  display: flex;
+}
+
+.hundredPercentWidth {
+  width: 100%;
+}
