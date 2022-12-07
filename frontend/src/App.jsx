@@ -1,20 +1,24 @@
 import { useState, useRef, useEffect } from "react";
+import { Container } from "@chakra-ui/react";
 import "./App.css";
 import { SingleFieldForm } from "./SingleFieldForm";
-import { Container } from "@chakra-ui/react";
 
 function App() {
   const ref = useRef(null);
   const [userName, setUserName] = useState(null);
   const [chats, setChats] = useState([]);
 
-  const handleNewMessage = (vals) => {
-    setChats([...chats, vals]);
-  };
-
   useEffect(() => {
     scrollToNewChat();
   }, [chats]);
+
+  const handleSendMessage = ({ Message }) => {
+    setChats([...chats, { userName, message: Message }]);
+  };
+
+  const handleUsername = ({ Username }) => {
+    setUserName(Username);
+  };
 
   const scrollToNewChat = () => {
     if (ref.current) {
@@ -29,13 +33,13 @@ function App() {
           <h1>{!!userName && `gm ${userName}`}</h1>
           <ul id="chat-scroll" ref={ref}>
             {chats.map((c) => (
-              <li k={c.Message} className="chat-message">
-                {userName}: {c.Message}
+              <li key={c.message} className="chat-message">
+                {c.userName}: {c.message}
               </li>
             ))}
           </ul>
           <SingleFieldForm
-            getFormValues={handleNewMessage}
+            getFormValues={handleSendMessage}
             formField="Message"
             buttonText="Send"
           />
@@ -43,7 +47,7 @@ function App() {
       ) : (
         <SingleFieldForm
           fullWidth
-          getFormValues={(vals) => setUserName(vals.Username)}
+          getFormValues={handleUsername}
           formField="Username"
           buttonText="Chat"
         />

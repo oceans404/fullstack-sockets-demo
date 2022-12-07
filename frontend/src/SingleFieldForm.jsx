@@ -1,12 +1,7 @@
 import { useForm } from "react-hook-form";
 import { Input, Button } from "@chakra-ui/react";
 
-export function SingleFieldForm({
-  getFormValues,
-  formField,
-  buttonText,
-  fullWidth,
-}) {
+export function SingleFieldForm({ getFormValues, formField, buttonText }) {
   const {
     handleSubmit,
     register,
@@ -29,7 +24,7 @@ export function SingleFieldForm({
         w="100%"
       />
 
-      <Button colorScheme="teal" isLoading={isSubmitting} type="submit">
+      <Button isLoading={isSubmitting} type="submit">
         {buttonText}
       </Button>
     </form>
