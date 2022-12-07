@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
+import { Container } from "@chakra-ui/react";
 import "./App.css";
 import { SingleFieldForm } from "./SingleFieldForm";
-import { Container } from "@chakra-ui/react";
+import { connectToSocket } from "./socket";
 
 function App() {
   const ref = useRef(null);
@@ -14,6 +15,7 @@ function App() {
 
   useEffect(() => {
     scrollToNewChat();
+    connectToSocket();
   }, [chats]);
 
   const scrollToNewChat = () => {
