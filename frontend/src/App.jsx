@@ -1,21 +1,47 @@
 import { useState, useRef, useEffect } from "react";
 import { Container } from "@chakra-ui/react";
+import { io } from "socket.io-client";
 import "./App.css";
 import { SingleFieldForm } from "./SingleFieldForm";
-import { connectToSocket } from "./socket";
+
+const serverURL = "http://localhost:3000";
+const socket = io(serverURL);
 
 function App() {
   const ref = useRef(null);
   const [userName, setUserName] = useState(null);
   const [chats, setChats] = useState([]);
 
-  const handleNewMessage = (vals) => {
-    setChats([...chats, vals]);
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log(socket.id);
+    });
+
+    socket.on("new-message", (newChat) => {
+      setChats((chats) => [...chats, newChat]);
+    });
+
+    socket.on("new-user", (user) => console.log(`new user: ${user}`));
+
+    return () => {
+      socket.off("connect");
+      socket.off("new-message");
+      socket.off("new-user");
+    };
+  }, []);
+
+  const handleSendMessage = ({ Message }) => {
+    // setChats([...chats, { userName, message: Message }]);
+    socket.emit("send-message", { userName, message: Message });
+  };
+
+  const handleUsername = ({ Username }) => {
+    setUserName(Username);
+    socket.emit("set-username", Username);
   };
 
   useEffect(() => {
     scrollToNewChat();
-    connectToSocket();
   }, [chats]);
 
   const scrollToNewChat = () => {
@@ -31,13 +57,13 @@ function App() {
           <h1>{!!userName && `gm ${userName}`}</h1>
           <ul id="chat-scroll" ref={ref}>
             {chats.map((c) => (
-              <li k={c.Message} className="chat-message">
-                {userName}: {c.Message}
+              <li key={c.message} className="chat-message">
+                {c.userName}: {c.message}
               </li>
             ))}
           </ul>
           <SingleFieldForm
-            getFormValues={handleNewMessage}
+            getFormValues={handleSendMessage}
             formField="Message"
             buttonText="Send"
           />
@@ -45,7 +71,7 @@ function App() {
       ) : (
         <SingleFieldForm
           fullWidth
-          getFormValues={(vals) => setUserName(vals.Username)}
+          getFormValues={handleUsername}
           formField="Username"
           buttonText="Chat"
         />
