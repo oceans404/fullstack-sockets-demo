@@ -39,13 +39,6 @@ node server.js
 
 Notice how this runs the console log one time and then exits. Let's install [nodemon](https://www.npmjs.com/package/nodemon), a dev tool for automatically restarting your server when file changes in the directory are detected so that we don't have to constantly restart the server. 
 
-First create a .gitignore and ignore node modules in .gitignore
-
-`touch .gitignore`
-```bash
-node_modules
-```
-
 Install nodemon
 
 `npm install --save-dev nodemon`
