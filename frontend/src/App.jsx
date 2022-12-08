@@ -30,6 +30,10 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    scrollToNewChat();
+  }, [chats]);
+
   const handleSendMessage = ({ Message }) => {
     // setChats([...chats, { userName, message: Message }]);
     socket.emit("send-message", { userName, message: Message });
@@ -39,10 +43,6 @@ function App() {
     setUserName(Username);
     socket.emit("set-username", Username);
   };
-
-  useEffect(() => {
-    scrollToNewChat();
-  }, [chats]);
 
   const scrollToNewChat = () => {
     if (ref.current) {
