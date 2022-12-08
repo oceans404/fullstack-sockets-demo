@@ -111,33 +111,27 @@ Install the [Socket.io Client API](https://socket.io/docs/v4/client-installation
 
 `npm install socket.io-client`
 
-Create a file for socket connection
-
-`touch src/socket.js`
-
-Import the socket dependency and create a connectToSocket function in src/socket.js
+Import the socket dependency and create a socket connection above the App component in src/App.jsx
 
 ```js
 import { io } from "socket.io-client";
 
-export function connectToSocket() {
-  const serverURL = "http://localhost:3000";
-  const socket = io(serverURL);
-
-  console.log(socket);
-}
-
+const serverURL = "http://localhost:3000";
+const socket = io(serverURL);
 ```
 
-Call this function in the initial useEffect in src/App.jsx
+Within the App component in src/App.jsx, create a useEffect that runs once at component render. Add an event listener to watch for socket connection and console log the socket. Remove the listener in the cleanup step to prevent multiple event registrations.
 
-`import { connectToSocket } from "./socket";`
 ```js
 useEffect(() => {
-    scrollToNewChat();
-    connectToSocket();
+  socket.on("connect", () => {
+    console.log(socket);
+  });
 
-}, [chats]);
+  return () => {
+    socket.off("connect");
+  };
+}, []);
 ```
 
 Start the frontend by following [frontend README instructions](https://github.com/oceans404/fullstack-sockets-demo/tree/main/frontend#readme) and open your chrome dev tools to the console tab. You will see 2 errors. These errors are repeated every few seconds because of HTTP long-polling transport (also simply referred as "polling") or consecutive HTTP requests being blocked by the server and then retried. 
@@ -165,13 +159,74 @@ const io = new Server(port, {
   },
 });
 
-io.on("connection", (socket) => {
+io.on("connect", (socket) => {
   console.log("gm!");
   console.log(socket.id);
 });
 ```
 
-Refresh your frontend website and open the console tool. Every time you refresh the frontend, your cli logs 'gm!' and the new frontend socket id. The frontend logs the socket object with a matching id.
+### 5. Track Socket Connect, Disconnect, and ClientsCount
+
+Refresh your frontend website and open the console tool. Every time you refresh the frontend, your server logs 'gm!' and the new frontend socket id onto the cli. The frontend logs the socket object with a matching id.
 
 <img width="1251" alt="Screen Shot 2022-12-07 at 10 34 14 AM" src="https://user-images.githubusercontent.com/91382964/206266784-9cb11108-5851-423a-b919-f820d4f2e924.png">
 
+Every open instance of the frontend counts as 1 "connection." If you open 3 different tabs to localhost:5173, the server logs connection to each. The server can track connection, disconnection, and connected client count.
+
+In server/server.js use [io.engine](https://socket.io/docs/v4/server-instance/#serverengine) to create a countConnectedClients function to fetch the number of currently connected clients. Log this in your "connect" function. We also want to track disconnection from the socket. Nest a ["disconnect" event listener](https://socket.io/docs/v4/server-socket-instance/#disconnect) to watch for that action on every connected socket. 
+
+```node
+const countConnectedClients = () => io.engine.clientsCount;
+
+io.on("connect", (socket) => {
+  console.log("gm!");
+  console.log(`${socket.id} just connected`);
+  console.log(`${countConnectedClients()} clients are online`);
+
+  socket.on("disconnect", (reason) => {
+    console.log(`${socket.id} just disconnected`);
+    console.log(`${countConnectedClients()} clients are online`);
+  });
+});
+```
+
+### 6. Learn how to "emit" custom events with data
+
+We've proved that our server can "hear" connect and disconnect events from our client and count the total current connections. Connect,  disconnect, and connect_error are 3 [special events](https://socket.io/docs/v4/client-socket-instance/#events) defined by socket. You can also define your own events + any data and "emit" these in either direction 
+
+
+
+**Custom Emit Example 1: Emit "gm" event from server -> client**
+
+Server
+```node
+io.on("connect", (socket) => {
+  socket.emit("gm", "frens");
+});
+```
+Client
+
+```node
+socket.on("gm", (arg) => {
+  console.log(arg); // frens
+});
+```
+
+**Custom Emit Example 2: Emit "gn" event from client -> server**
+
+Client
+
+```node
+socket.emit("gn", {name: "steph"});
+```
+
+Server
+```node
+io.on("connect", (socket) => {
+  socket.on("gn", (arg) => {
+    console.log(arg); // {name: "steph"}
+  });
+});
+```
+
+### 7. 
