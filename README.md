@@ -2,7 +2,7 @@
 
 ## About Socket.io
 
-We'll build a fullstack chat app using [Socket.io](https://socket.io/) a library for managing realtime, bi-directional, event based communication between a client (frontend) and server.
+We'll build a fullstack chat app using React (Vite), Node.js, and [Socket.io](https://socket.io/) a library for managing realtime, bi-directional, event based communication between a client (frontend) and server.
 
 ## Starter code
 
@@ -222,4 +222,206 @@ io.on("connect", (socket) => {
 });
 ```
 
-### 7. 
+### 7. Emit "set-username" and "new-user" events
+
+Emit a "set-username" event from the client
+
+frontend/src/App.jsx
+```js
+const handleUsername = ({ Username }) => {
+    setUserName(Username);
+    socket.emit("set-username", Username);
+};
+```
+
+Nest a "set-username" watcher within the connect event in the server. After a username is set, emit a "new-user" event to all clients.
+
+server/server.js
+
+```node
+io.on("connect", (socket) => {
+  console.log("gm!");
+  console.log(`${socket.id} just connected`);
+  console.log(`${countConnectedClients()} clients are online`);
+
+  socket.on("disconnect", (reason) => {
+    console.log(`${socket.id} just disconnected`);
+    console.log(`${countConnectedClients()} clients are online`);
+  });
+
+  socket.on("set-username", (username) => {
+    console.log(username, socket.id);
+    io.emit("new-user", username);
+  });
+});
+```
+
+Update the initial useEffect to watch for "new-user" events and log when there is a new user. Remove the "new-user" listener in the cleanup step. 
+
+frontend/src/App.jsx
+
+```js
+useEffect(() => {
+    socket.on("connect", () => {
+      console.log(socket.id);
+    });
+
+    socket.on("new-user", (user) => console.log(`new user: ${user}`));
+
+    return () => {
+      socket.off("connect");
+      socket.off("new-user");
+    };
+  }, []);
+```
+
+
+### 8. Emit "send-message" and "new-message" events
+
+Update the handleSendMessage function to emit a "send-message" event with data that includes the current userName and the message.
+
+frontend/src/App.jsx
+
+```js
+const handleSendMessage = ({ Message }) => {
+    socket.emit("send-message", { userName, message: Message });
+};
+```
+
+Nest a "send-message" watcher within the connect event in the server. After a message is sent, emit a "new-message" event to all clients.
+
+server/server.js
+
+```node
+io.on("connect", (socket) => {
+  console.log("gm!");
+  console.log(`${socket.id} just connected`);
+  console.log(`${countConnectedClients()} clients are online`);
+
+  socket.on("disconnect", (reason) => {
+    console.log(`${socket.id} just disconnected`);
+    console.log(`${countConnectedClients()} clients are online`);
+  });
+
+  socket.on("set-username", (username) => {
+    console.log(username, socket.id);
+    io.emit("new-user", username);
+  });
+
+  socket.on("send-message", (messageInfo) => {
+    io.emit("new-message", messageInfo);
+  });
+});
+```
+
+Update the initial useEffect to watch for "new-message" events. When there is a new message, update the state with the setChats setter to add the new message to the chats array. `chats` are already mapped visually by the App component.
+
+Remove the "new-message" listener in the cleanup step. 
+
+frontend/src/App.jsx
+
+```js
+ useEffect(() => {
+    socket.on("connect", () => {
+      console.log(socket.id);
+    });
+
+    socket.on("new-message", (newChat) => {
+      setChats((chats) => [...chats, newChat]);
+    });
+
+    socket.on("new-user", (user) => console.log(`new user: ${user}`));
+
+    return () => {
+      socket.off("connect");
+      socket.off("new-message");
+      socket.off("new-user");
+    };
+}, []);
+```
+
+🥳 Ta-da! We've built minimal chat app with sockets:
+
+![chat](https://user-images.githubusercontent.com/91382964/206546634-d9318a05-a434-422a-b5f5-a28c29c4a231.gif)
+
+
+
+### 9. Add optional frontend improvements
+
+- Show an "online now" list of connected usernames
+- Add "[userName] has entered the chat" / "[userName] has left the chat" messages
+- Only keep the latest N messages stored as `chats` in state as new messages come in.
+
+
+### 10. Deployment - gtfo localhost
+
+Currently, the server lives on localhost:3000 while running `npm start` and the frontend lives on localhost:5173 while running `npm run dev`. These URLS paths are hardcoded in the frontend and server. Let's move these into environment variables.
+
+
+#### Deploy your frontend 
+
+...
+
+#### Deploy your server 
+...
+
+
+<!--- 
+#### Elastic Beanstalk
+Let's deploy the server to Elastic Beanstalk (AWS EB)
+
+1. Create an AWS account
+2. Install the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+3. [Install EB CLI](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/eb-cli3-install-osx.html) globally `brew install awsebcli`
+
+2. Visit the [AWS IAM console](https://console.aws.amazon.com/iam/home) and add a user. 
+
+Set user details: Name it whatever you want and check the box for AWS credential type: Access key - Programmatic access.
+
+Set permissions: Attach existing policies directly > Check AdministratorAccess-AWSElasticBeanstalk
+
+Create user and stay on the success page where you'll copy pasta the access key id and secret access key into the next step.
+
+3. Configure your AWS account `aws configure` and set your keys from the previous step. I used us-west-2 (Oregon) for my default region and json for my default output format.
+
+```bash
+Default region name [None]: us-west-2
+Default output format [None]: json
+```
+
+4. Create an EB CLI repository for your server
+
+```bash
+cd server
+eb init --platform node.js --region us-west-2
+````
+
+5. Create an EB environment with the default settings for the Node.js platform
+
+This spins up a bunch of AWS resources including a domain for your server. [Read more about everything bootstrapped with EB here](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create_deploy_nodejs_express.html#create_deploy_nodejs_express.eb_init-rds)
+
+```bash
+eb create --sample node-express-env
+```
+
+Result: a domain, mine is node-express-env.eba-qa2pdnyk.us-west-2.elasticbeanstalk.com
+```bash
+2022-12-08 19:58:58    INFO    Instance deployment completed successfully.
+2022-12-08 19:59:31    INFO    Application available at node-express-env.eba-qa2pdnyk.us-west-2.elasticbeanstalk.com.
+2022-12-08 19:59:31    INFO    Successfully launched environment: node-express-env
+```
+
+6. Update the EB environment with your own application
+
+Create a Procfile
+```bash
+touch Procfile
+```
+
+Set up the start command: node server.js
+
+Procfile
+```bash
+web: node server.js
+```
+--->
