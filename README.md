@@ -4,6 +4,8 @@
 
 We'll build a fullstack chat app using React (Vite), Node.js, and [Socket.io](https://socket.io/) a library for managing realtime, bi-directional, event based communication between a client (frontend) and server.
 
+Check out the completed code on the done branch: [fullstack-sockets-demo/tree/done](https://github.com/oceans404/fullstack-sockets-demo/tree/done). The deployed site is live: https://proud-cell-8475.on.fleek.co/
+
 ## Starter code
 
 I created a starter frontend for you so you can focus on the socket server and client implementation rather than the form/ui creation. In this tutorial we will create a socket chat server. Then we will install [socket.io-client](https://socket.io/docs/v4/client-installation/) and rewire the frontend to connect to the server for bi-directional chat driven communication.
@@ -357,71 +359,123 @@ frontend/src/App.jsx
 
 Currently, the server lives on localhost:3000 while running `npm start` and the frontend lives on localhost:5173 while running `npm run dev`. These URLS paths are hardcoded in the frontend and server. Let's move these into environment variables.
 
+#### Refactor frontend to add environment variables
 
-#### Deploy your frontend 
-
-...
-
-#### Deploy your server 
-...
-
-
-<!--- 
-#### Elastic Beanstalk
-Let's deploy the server to Elastic Beanstalk (AWS EB)
-
-1. Create an AWS account
-2. Install the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-3. [Install EB CLI](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/eb-cli3-install-osx.html) globally `brew install awsebcli`
-
-2. Visit the [AWS IAM console](https://console.aws.amazon.com/iam/home) and add a user. 
-
-Set user details: Name it whatever you want and check the box for AWS credential type: Access key - Programmatic access.
-
-Set permissions: Attach existing policies directly > Check AdministratorAccess-AWSElasticBeanstalk
-
-Create user and stay on the success page where you'll copy pasta the access key id and secret access key into the next step.
-
-3. Configure your AWS account `aws configure` and set your keys from the previous step. I used us-west-2 (Oregon) for my default region and json for my default output format.
+1. Create an .env file
 
 ```bash
-Default region name [None]: us-west-2
-Default output format [None]: json
+cd frontend
+touch .env
 ```
 
-4. Create an EB CLI repository for your server
+2. Add a VITE_SERVER_URL variable to the .env file and set the value to your local server url
+
+frontend/.env
+```
+VITE_SERVER_URL="http://localhost:3000"
+```
+
+3. Add .env to the .gitignore
+
+frontend/.gitignore
+```
+.env
+```
+
+4. Replace the serverURL value with a reference to the variable in the .env file
+
+frontend/src/App.jsx
+```js
+const serverURL = import.meta.env.VITE_SERVER_URL;
+```
+
+#### Refactor server to add environment variables
+
+1. Install dotenv and create an .env file
 
 ```bash
 cd server
-eb init --platform node.js --region us-west-2
-````
-
-5. Create an EB environment with the default settings for the Node.js platform
-
-This spins up a bunch of AWS resources including a domain for your server. [Read more about everything bootstrapped with EB here](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create_deploy_nodejs_express.html#create_deploy_nodejs_express.eb_init-rds)
-
-```bash
-eb create --sample node-express-env
+npm i dotenv
+touch .env
 ```
 
-Result: a domain, mine is node-express-env.eba-qa2pdnyk.us-west-2.elasticbeanstalk.com
-```bash
-2022-12-08 19:58:58    INFO    Instance deployment completed successfully.
-2022-12-08 19:59:31    INFO    Application available at node-express-env.eba-qa2pdnyk.us-west-2.elasticbeanstalk.com.
-2022-12-08 19:59:31    INFO    Successfully launched environment: node-express-env
+2. Add a NODE_CLIENT_ORIGIN variable to the .env file and set the value to your frontend local host
+
+server/.env
+```
+NODE_CLIENT_ORIGIN="http://localhost:5173"
 ```
 
-6. Update the EB environment with your own application
+3. Add .env to the .gitignore
 
-Create a Procfile
-```bash
-touch Procfile
+server/.gitignore
+```
+node_modules
+.env
 ```
 
-Set up the start command: node server.js
+4. Require the dotenv dependency at the top of your server file. Replace the clientOrigin value with a reference to the variable in the .env file
 
-Procfile
-```bash
-web: node server.js
+server/server.js
+```js
+require('dotenv').config()
 ```
---->
+
+```js
+const clientOrigin = process.env.NODE_CLIENT_ORIGIN;
+```
+
+#### Deploy your frontend 
+
+Let's host our frontend on IPFS for free using [Fleek](https://app.fleek.co/)
+
+1. [Sign in with Ethereum](https://app.fleek.co/#/auth/sign-in) - sign a transaction to connect your wallet of choice
+2. Click "Add a New Site"
+3. Connect your Github
+4. Select your repo: oceans404/fullstack-sockets-demo
+5. Hosting service: IPFS
+6. Use the following settings. Then open Advanced and add a VITE_SERVER_URL environment variable of http://localhost:3000. We will update this after deploying the server.
+
+<img width="665" alt="Screen Shot 2022-12-13 at 4 45 34 PM" src="https://user-images.githubusercontent.com/91382964/207476764-c8a6315c-6236-4ba4-ab49-218179e87a7e.png">
+
+7. Click deploy site. Fleek will build and deploying your site to IPFS and their CDN.
+
+8. Check the last line of the deploy log for your deployed site. My frontend was deployed to https://proud-cell-8475.on.fleek.co 🥳
+<img width="1176" alt="Screen Shot 2022-12-13 at 4 50 31 PM" src="https://user-images.githubusercontent.com/91382964/207477344-e0888eff-528e-40ed-af8f-c022c5e45742.png">
+
+9. Visit your deployed frontend. Uh-oh, it's not working yet! That's because it's not able to connect to your server at localhost:3000... let's deploy the server next.
+
+<img width="1170" alt="Screen Shot 2022-12-13 at 4 52 35 PM" src="https://user-images.githubusercontent.com/91382964/207477622-d19a2f93-0b65-411d-a48a-51968dbb8273.png">
+
+
+
+#### Deploy your server 
+
+Let's deploy and host our Node.js app for free with [Render](https://render.com/).
+
+1. [Sign up for Render](https://render.com/register) and sign in
+2. Select "New Web Service" on the dashboard page
+3. Connect the oceans404 / fullstack-sockets-demo repo
+4. Use the following settings. 
+<img width="789" alt="Screen Shot 2022-12-13 at 4 56 39 PM" src="https://user-images.githubusercontent.com/91382964/207478129-d9277b8a-4a99-4ef9-8769-caccb2e348c0.png">
+5. Open Advanced and add a NODE_CLIENT_ORIGIN environment variable of whatever your Fleek frontend was
+
+Mine is set to NODE_CLIENT_ORIGIN: https://proud-cell-8475.on.fleek.co
+
+<img width="798" alt="Screen Shot 2022-12-13 at 4 58 59 PM" src="https://user-images.githubusercontent.com/91382964/207478396-cbad69e2-336d-4e0d-b7d8-8f4b17252930.png">
+
+6. Click "Create Web Service" and copy the deployed server url your service name. Mine is https://socket-server-gjqh.onrender.com
+
+<img width="975" alt="Screen Shot 2022-12-13 at 5 05 55 PM" src="https://user-images.githubusercontent.com/91382964/207479788-5a7a8e75-06e3-4251-a6d0-d7fa670fea2e.png">
+
+7. Go back to the Fleek dashboard. Hosting > Settings > Build & Deploy > Advanced Build Settings > Environment Variables. Edit settings in the "Environment Variables" tab and update VITE_SERVER_URL to your server url. Save.
+
+<img width="1177" alt="Screen Shot 2022-12-13 at 5 10 08 PM" src="https://user-images.githubusercontent.com/91382964/207480208-8a76a335-b385-43e2-aeb2-a27950b442f6.png">
+
+
+8. Go to the Deploys tab and click "Trigger Redeploy"
+
+<img width="1179" alt="Screen Shot 2022-12-13 at 5 10 51 PM" src="https://user-images.githubusercontent.com/91382964/207480309-c75c7a19-1a3c-4325-b761-c6d5e87b3c48.png">
+
+
+### 🚀 Visit deployed your fullstack chat app https://proud-cell-8475.on.fleek.co/
