@@ -1,7 +1,8 @@
+require("dotenv").config();
 const { Server } = require("socket.io");
 
 const port = 3000;
-const clientOrigin = "http://localhost:5173";
+const clientOrigin = process.env.NODE_CLIENT_ORIGIN;
 
 const io = new Server(port, {
   cors: {

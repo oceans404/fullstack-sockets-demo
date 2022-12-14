@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 import "./App.css";
 import { SingleFieldForm } from "./SingleFieldForm";
 
-const serverURL = "http://localhost:3000";
+const serverURL = import.meta.env.VITE_SERVER_URL;
 const socket = io(serverURL);
 
 function App() {
