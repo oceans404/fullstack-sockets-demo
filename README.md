@@ -2,7 +2,9 @@
 
 ## About Socket.io
 
-We'll build a fullstack chat app using [Socket.io](https://socket.io/) a library for managing realtime, bi-directional, event based communication between a client (frontend) and server.
+We'll build a fullstack chat app using React (Vite), Node.js, and [Socket.io](https://socket.io/) a library for managing realtime, bi-directional, event based communication between a client (frontend) and server.
+
+Check out the completed code on the done branch: [fullstack-sockets-demo/tree/done](https://github.com/oceans404/fullstack-sockets-demo/tree/done). The deployed site is live: https://proud-cell-8475.on.fleek.co/
 
 ## Starter code
 
@@ -222,4 +224,258 @@ io.on("connect", (socket) => {
 });
 ```
 
-### 7. 
+### 7. Emit "set-username" and "new-user" events
+
+Emit a "set-username" event from the client
+
+frontend/src/App.jsx
+```js
+const handleUsername = ({ Username }) => {
+    setUserName(Username);
+    socket.emit("set-username", Username);
+};
+```
+
+Nest a "set-username" watcher within the connect event in the server. After a username is set, emit a "new-user" event to all clients.
+
+server/server.js
+
+```node
+io.on("connect", (socket) => {
+  console.log("gm!");
+  console.log(`${socket.id} just connected`);
+  console.log(`${countConnectedClients()} clients are online`);
+
+  socket.on("disconnect", (reason) => {
+    console.log(`${socket.id} just disconnected`);
+    console.log(`${countConnectedClients()} clients are online`);
+  });
+
+  socket.on("set-username", (username) => {
+    console.log(username, socket.id);
+    io.emit("new-user", username);
+  });
+});
+```
+
+Update the initial useEffect to watch for "new-user" events and log when there is a new user. Remove the "new-user" listener in the cleanup step. 
+
+frontend/src/App.jsx
+
+```js
+useEffect(() => {
+    socket.on("connect", () => {
+      console.log(socket.id);
+    });
+
+    socket.on("new-user", (user) => console.log(`new user: ${user}`));
+
+    return () => {
+      socket.off("connect");
+      socket.off("new-user");
+    };
+  }, []);
+```
+
+
+### 8. Emit "send-message" and "new-message" events
+
+Update the handleSendMessage function to emit a "send-message" event with data that includes the current userName and the message.
+
+frontend/src/App.jsx
+
+```js
+const handleSendMessage = ({ Message }) => {
+    socket.emit("send-message", { userName, message: Message });
+};
+```
+
+Nest a "send-message" watcher within the connect event in the server. After a message is sent, emit a "new-message" event to all clients.
+
+server/server.js
+
+```node
+io.on("connect", (socket) => {
+  console.log("gm!");
+  console.log(`${socket.id} just connected`);
+  console.log(`${countConnectedClients()} clients are online`);
+
+  socket.on("disconnect", (reason) => {
+    console.log(`${socket.id} just disconnected`);
+    console.log(`${countConnectedClients()} clients are online`);
+  });
+
+  socket.on("set-username", (username) => {
+    console.log(username, socket.id);
+    io.emit("new-user", username);
+  });
+
+  socket.on("send-message", (messageInfo) => {
+    io.emit("new-message", messageInfo);
+  });
+});
+```
+
+Update the initial useEffect to watch for "new-message" events. When there is a new message, update the state with the setChats setter to add the new message to the chats array. `chats` are already mapped visually by the App component.
+
+Remove the "new-message" listener in the cleanup step. 
+
+frontend/src/App.jsx
+
+```js
+ useEffect(() => {
+    socket.on("connect", () => {
+      console.log(socket.id);
+    });
+
+    socket.on("new-message", (newChat) => {
+      setChats((chats) => [...chats, newChat]);
+    });
+
+    socket.on("new-user", (user) => console.log(`new user: ${user}`));
+
+    return () => {
+      socket.off("connect");
+      socket.off("new-message");
+      socket.off("new-user");
+    };
+}, []);
+```
+
+🥳 Ta-da! We've built minimal chat app with sockets:
+
+![chat](https://user-images.githubusercontent.com/91382964/206546634-d9318a05-a434-422a-b5f5-a28c29c4a231.gif)
+
+
+
+### 9. Add optional frontend improvements
+
+- Show an "online now" list of connected usernames
+- Add "[userName] has entered the chat" / "[userName] has left the chat" messages
+- Only keep the latest N messages stored as `chats` in state as new messages come in.
+
+
+### 10. Deployment - gtfo localhost
+
+Currently, the server lives on localhost:3000 while running `npm start` and the frontend lives on localhost:5173 while running `npm run dev`. These URLS paths are hardcoded in the frontend and server. Let's move these into environment variables.
+
+#### Refactor frontend to add environment variables
+
+1. Create an .env file
+
+```bash
+cd frontend
+touch .env
+```
+
+2. Add a VITE_SERVER_URL variable to the .env file and set the value to your local server url
+
+frontend/.env
+```
+VITE_SERVER_URL="http://localhost:3000"
+```
+
+3. Add .env to the .gitignore
+
+frontend/.gitignore
+```
+.env
+```
+
+4. Replace the serverURL value with a reference to the variable in the .env file
+
+frontend/src/App.jsx
+```js
+const serverURL = import.meta.env.VITE_SERVER_URL;
+```
+
+#### Refactor server to add environment variables
+
+1. Install dotenv and create an .env file
+
+```bash
+cd server
+npm i dotenv
+touch .env
+```
+
+2. Add a NODE_CLIENT_ORIGIN variable to the .env file and set the value to your frontend local host
+
+server/.env
+```
+NODE_CLIENT_ORIGIN="http://localhost:5173"
+```
+
+3. Add .env to the .gitignore
+
+server/.gitignore
+```
+node_modules
+.env
+```
+
+4. Require the dotenv dependency at the top of your server file. Replace the clientOrigin value with a reference to the variable in the .env file
+
+server/server.js
+```js
+require('dotenv').config()
+```
+
+```js
+const clientOrigin = process.env.NODE_CLIENT_ORIGIN;
+```
+
+#### Deploy your frontend 
+
+Let's host our frontend on IPFS for free using [Fleek](https://app.fleek.co/)
+
+1. [Sign in with Ethereum](https://app.fleek.co/#/auth/sign-in) - sign a transaction to connect your wallet of choice
+2. Click "Add a New Site"
+3. Connect your Github
+4. Select your repo: oceans404/fullstack-sockets-demo
+5. Hosting service: IPFS
+6. Use the following settings. Then open Advanced and add a VITE_SERVER_URL environment variable of http://localhost:3000. We will update this after deploying the server.
+
+<img width="665" alt="Screen Shot 2022-12-13 at 4 45 34 PM" src="https://user-images.githubusercontent.com/91382964/207476764-c8a6315c-6236-4ba4-ab49-218179e87a7e.png">
+
+7. Click deploy site. Fleek will build and deploying your site to IPFS and their CDN.
+
+8. Check the last line of the deploy log for your deployed site. My frontend was deployed to https://proud-cell-8475.on.fleek.co 🥳
+<img width="1176" alt="Screen Shot 2022-12-13 at 4 50 31 PM" src="https://user-images.githubusercontent.com/91382964/207477344-e0888eff-528e-40ed-af8f-c022c5e45742.png">
+
+9. Visit your deployed frontend. Uh-oh, it's not working yet! That's because it's not able to connect to your server at localhost:3000... let's deploy the server next.
+
+<img width="1170" alt="Screen Shot 2022-12-13 at 4 52 35 PM" src="https://user-images.githubusercontent.com/91382964/207477622-d19a2f93-0b65-411d-a48a-51968dbb8273.png">
+
+
+
+#### Deploy your server 
+
+Let's deploy and host our Node.js app for free with [Render](https://render.com/).
+
+1. [Sign up for Render](https://render.com/register) and sign in
+2. Select "New Web Service" on the dashboard page
+3. Connect the oceans404 / fullstack-sockets-demo repo
+4. Use the following settings. 
+<img width="789" alt="Screen Shot 2022-12-13 at 4 56 39 PM" src="https://user-images.githubusercontent.com/91382964/207478129-d9277b8a-4a99-4ef9-8769-caccb2e348c0.png">
+5. Open Advanced and add a NODE_CLIENT_ORIGIN environment variable of whatever your Fleek frontend was
+
+Mine is set to NODE_CLIENT_ORIGIN: https://proud-cell-8475.on.fleek.co
+
+<img width="798" alt="Screen Shot 2022-12-13 at 4 58 59 PM" src="https://user-images.githubusercontent.com/91382964/207478396-cbad69e2-336d-4e0d-b7d8-8f4b17252930.png">
+
+6. Click "Create Web Service" and copy the deployed server url your service name. Mine is https://socket-server-gjqh.onrender.com
+
+<img width="975" alt="Screen Shot 2022-12-13 at 5 05 55 PM" src="https://user-images.githubusercontent.com/91382964/207479788-5a7a8e75-06e3-4251-a6d0-d7fa670fea2e.png">
+
+7. Go back to the Fleek dashboard. Hosting > Settings > Build & Deploy > Advanced Build Settings > Environment Variables. Edit settings in the "Environment Variables" tab and update VITE_SERVER_URL to your server url. Save.
+
+<img width="1177" alt="Screen Shot 2022-12-13 at 5 10 08 PM" src="https://user-images.githubusercontent.com/91382964/207480208-8a76a335-b385-43e2-aeb2-a27950b442f6.png">
+
+
+8. Go to the Deploys tab and click "Trigger Redeploy"
+
+<img width="1179" alt="Screen Shot 2022-12-13 at 5 10 51 PM" src="https://user-images.githubusercontent.com/91382964/207480309-c75c7a19-1a3c-4325-b761-c6d5e87b3c48.png">
+
+
+### 🚀 Visit deployed your fullstack chat app https://proud-cell-8475.on.fleek.co/
